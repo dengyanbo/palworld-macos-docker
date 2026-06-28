@@ -1,0 +1,37 @@
+services:
+  palworld:
+    image: thijsvanloef/palworld-server-docker:latest
+    container_name: palworld-server
+    restart: unless-stopped
+    stop_grace_period: 30s   # 优雅停服等待时间（保存存档）
+
+    # ---------------------------------------------------------------
+    # Apple 芯片 (M1/M2/M3/M4) 说明：
+    # 本镜像为多架构镜像，arm64 变体内置 Box64，可在 Apple 芯片上
+    # 原生运行 x86 服务端，默认无需任何额外配置（推荐）。
+    #
+    # 备选方案：若 arm64 + Box64 运行不稳定，可改用 amd64 + Rosetta：
+    #   1) 取消下面 platform 这一行的注释
+    #   2) Docker Desktop -> Settings -> General 勾选
+    #      "Use Rosetta for x86/amd64 emulation on Apple Silicon"
+    # platform: linux/amd64
+    # ---------------------------------------------------------------
+
+    ports:
+      - "8211:8211/udp"     # 游戏端口（必需，外网联机需在路由器转发此 UDP 端口）
+      - "27015:27015/udp"   # 查询端口（社区服列表用，可选）
+      - "8212:8212/tcp"     # REST API（仅本机使用，切勿对公网转发）
+      # - "25575:25575/tcp" # RCON（默认关闭，如在 .env 启用 RCON_ENABLED 再放开）
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./palworld:/palworld/   # 存档与服务端文件持久化目录
+
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s        # 首次安装服务端较慢，给足启动时间
